@@ -1,0 +1,79 @@
+<html>
+
+<!--
+	Original code by Shahid Thaika - shahidt@gmail.com.
+-->
+
+	<head>
+		<title>Database Load Tester</title>
+		
+		<style>
+			body {
+				padding: 1em;
+				
+				line-height: 1.5em;
+			}
+			
+			#queryArea {
+				display: flex;
+			}
+			
+			#queryArea div {
+				flex: 1;
+				padding-right: 1em;
+			}
+		</style>
+	</head>
+
+	<body>
+	
+		<h1>Database Load Tester</h1>
+		
+		<p>
+			If you haven't already, download the <a href="./misc/QueryList.xlsx">QueryList.xlsx</a> file, configure your list of queries, and copy-paste below. 
+			See <a href="./misc/screenshot.png" target="_blank">sample screenshot</a>.
+		</p>
+	
+		<div id="queryArea">
+			<div>
+				<textarea id="queryList" rows="25" style="width: 100%" placeholder="Paste QueryList columns A to E in here"></textarea>
+			</div>
+			<div>
+				<textarea id="outputResult" rows="25" style="width: 100%" placeholder="Execution output will show here"></textarea>
+			</div>
+		</div>
+		
+		<form>
+		<p>
+			DBMS: 
+			<select id="dbms">
+				<option value="mysql">MySQL</option>
+				<option value="sqlsrv">MS SQL Server</option>
+			</select>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			Server:
+			<input id="server" type="text" />
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			Port:
+			<input id="port" type="text" />
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		</p>
+		<p>
+			Database:
+			<input id="database" type="text" />
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			Username:
+			<input id="username" type="text" />
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			Password:
+			<input id="password" type="password" autocomplete="" />
+		</p>
+		</form>
+		
+		<p>
+			<button id="doTest">Execute</button>&nbsp;&nbsp;&nbsp;<span id="exec_status"></span>
+		</p>
+		
+		<script src="./js/db-load-test.js"></script>
+	</body>
+</html>
