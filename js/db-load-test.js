@@ -7,6 +7,9 @@ const TRIGGER_QUERY_URL = "/backend/trigger_query.php";
 var queryItems = [];
 var interval_pos = 0;
 var queriesTriggered = 0;
+var iterateTO = 0;
+var TOs = {};
+var cancelled = false;
 
 //load/save previous config to session
 var dsn = '';
@@ -36,6 +39,7 @@ document.getElementById('doTest').onclick = function() {
 		}
 		
 		
+		cancelled = false;
 		document.getElementById('exec_status').innerHTML = "Executing query list...";
 		this.innerText = "Cancel";
 		
@@ -63,6 +67,7 @@ document.getElementById('doTest').onclick = function() {
 		interval_pos = 0;
 		queriesTriggered = 0;
 		queryItems = [];
+		TOs = {};
 
 		//populate the list to execute
 		//:@: is our true EOL delimiter
@@ -93,25 +98,26 @@ document.getElementById('doTest').onclick = function() {
 		
 		//call the function that will iterate and process the query list items
 		if (queryItems.length > 0)
-			setTimeout(iterate_query_list, 0);
+			iterateTO = setTimeout(iterate_query_list, 0);
 	} else {
 		this.innerText = "Execute";
 		this.setAttribute('disabled', 'disabled');
+		cancelled = true;
 	}
 }
 
 function iterate_query_list() {
 	//do not iterate further if cancelled
-	if (document.getElementById('doTest').innerText == "Execute") {
+	if (cancelled) {
+		cancelled = false;
+
 		queryItems = [];
+		clearAllTOs();
 		
-		if (queriesTriggered == 0 && queryItems.length == 0) {
-			appendResult("Received response from all queries.\n");
-			document.getElementById('exec_status').innerHTML = "Done!";
+		if (queriesTriggered == 0) {
+			document.getElementById('exec_status').innerHTML = "Cancelled!";
 			document.getElementById('doTest').removeAttribute('disabled');
 		}
-		
-		return;
 	}
 	
 	//check which queries can be run in the next second
@@ -121,36 +127,42 @@ function iterate_query_list() {
 			//trigger each repetition
 			qi['repeat'] = qi['repeat'] == 0 ? 1 : qi['repeat'];
 			for (var j=0; j<qi['repeat']; j++) {
+				//store timeout ids
+				var toKey = qi['interval'] + '-' + qi['title'];
+				if (!TOs.hasOwnProperty(toKey))
+					TOs[toKey] = [];
+				
+				TOs[toKey].push(0);
+				var lastIndex = TOs[toKey].length - 1;
+				
+				//schedule trigger
 				queriesTriggered++;
-
-				setTimeout(
-					function(qTitle, qQuery) {
-						triggerQuery(qTitle, qQuery);
-					},
-					( (qi['interval'] - interval_pos) + (j * qi['repeat_gap']) ),
-					qi['title'] + " (#" + (j+1) + ")", //qi['title'] + (j>0 ? "(#" + (j+1) + ")" : ""),
-					qi['query']
-				);
+				TOs[toKey][lastIndex] = setTimeout(
+											function(qTitle, qQuery, ctoKey, ctoIndex) {
+												triggerQuery(qTitle, qQuery, ctoKey, ctoIndex);
+											},
+											( (qi['interval'] - interval_pos) + (j * qi['repeat_gap']) ),
+											qi['title'] + " (#" + (j+1) + ")", //qi['title'] + (j>0 ? "(#" + (j+1) + ")" : ""),
+											qi['query'],
+											toKey,
+											lastIndex
+										);
 			}
 			queryItems.splice(i, 1);
 		}
 	}
 	
 	//check for more items
-	document.getElementById('exec_status').innerHTML = "Elapsed: " + interval_pos + " milliseconds...";
-	if (queryItems.length > 0) {
+	if (queryItems.length > 0 || queriesTriggered > 0) {
+		document.getElementById('exec_status').innerHTML = "Elapsed: " + Math.round(interval_pos/1000) + " second" + (interval_pos == 1000 ? "" : "s") + ". " + queriesTriggered + " active queries.";
+	
 		interval_pos += 1000;
-		setTimeout(iterate_query_list, 1000);
-	} else {
-		setTimeout(
-			function() {
-				appendResult("Iterated through all items.");
-			}, 500);
+		iterateTO = setTimeout(iterate_query_list, 1000);
 	}
 }
 
 
-function triggerQuery(title, query) {
+function triggerQuery(title, query, ctoKey, ctoIndex) {
 	//trigger query using ajax
 	var xhttp = new XMLHttpRequest();
 	
@@ -189,6 +201,7 @@ function triggerQuery(title, query) {
 			queriesTriggered--;
 			
 			if (queriesTriggered == 0 && queryItems.length == 0) {
+				clearTimeout(iterateTO);
 				setTimeout(
 					function() {
 						appendResult("Received response from all queries.\n");
@@ -211,10 +224,28 @@ function triggerQuery(title, query) {
 		"&title=" + encodeURIComponent(title) +
 		"&query=" + encodeURIComponent(query)
 	);
+	
+	//mark timer as done
+	TOs[ctoKey][ctoIndex] = -1;
 }
 
 function appendResult(result) {
 	var orTextArea = document.getElementById('outputResult');
 	var str = orTextArea.value + result + "\n";
 	orTextArea.value = str;
+}
+
+//clear all scheduled trigger query timers
+function clearAllTOs() {
+	for (key in TOs) {
+		var toItem = TOs[key];
+		for (var i=0; i<toItem.length; i++) {
+			if (toItem[i] > -1) {
+				clearTimeout(toItem[i]);
+				queriesTriggered--;
+			}
+		};
+	}
+	
+	TOs = {};
 }
