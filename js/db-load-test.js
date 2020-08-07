@@ -215,6 +215,6 @@ function triggerQuery(title, query) {
 
 function appendResult(result) {
 	var orTextArea = document.getElementById('outputResult');
-	var str = orTextArea.innerHTML + result + "\n";
-	orTextArea.innerHTML = str;
+	var str = orTextArea.value + result + "\n";
+	orTextArea.value = str;
 }
