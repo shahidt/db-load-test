@@ -71,7 +71,12 @@ document.getElementById('doTest').onclick = function() {
 
 		//populate the list to execute
 		//:@: is our true EOL delimiter
-		var qi = document.getElementById('queryList').value.split(':@:');
+		//also remove double quotes from wrap text formatting
+		var qi = document.getElementById('queryList').value
+					.replace(/"@:@/g, '@:@')
+					.replace(/:@:"/g, ':@:')
+					.split(':@:');
+
 		for (var i=0; i<qi.length; i++) {
 			//@:@ is where the query begins
 			var qi_part = qi[i].split('@:@');
@@ -82,16 +87,21 @@ document.getElementById('doTest').onclick = function() {
 				
 				//5 to accomodate the TAB at the end
 				if (qip_meta.length == 5) {
+					var interval = parseInt(qip_meta[0].replace('\n', ''));
+
 					//populate the list
-					queryItems.push(
-						{
-							'interval': parseInt(qip_meta[0].replace('\n', '')),
-							'repeat': parseInt(qip_meta[1]),
-							'repeat_gap': parseInt(qip_meta[2]),
-							'title': qip_meta[3],
-							'query': qi_part[1]
-						}
-					);
+					if (!isNaN(interval))
+						queryItems.push(
+							{
+								'interval': interval,
+								'repeat': parseInt(qip_meta[1]),
+								'repeat_gap': parseInt(qip_meta[2]),
+								'title': qip_meta[3],
+								'query': qi_part[1]
+							}
+						);
+					else
+						console.log(interval);
 				}
 			}
 		}
@@ -154,7 +164,9 @@ function iterate_query_list() {
 	
 	//check for more items
 	if (queryItems.length > 0 || queriesTriggered > 0) {
-		document.getElementById('exec_status').innerHTML = "Elapsed: " + Math.round(interval_pos/1000) + " second" + (interval_pos == 1000 ? "" : "s") + ". " + queriesTriggered + " active queries.";
+		document.getElementById('exec_status').innerHTML = "Elapsed: " + Math.round(interval_pos/1000) + " second" + (interval_pos == 1000 ? "" : "s") + ". "
+															+ queriesTriggered + " active quer" + (queriesTriggered == 1 ? "y. " : "ies. ")
+															+ queryItems.length + " query list item" + (queryItems.length == 1? "" : "s") + " left.";
 	
 		interval_pos += 1000;
 		iterateTO = setTimeout(iterate_query_list, 1000);
@@ -205,7 +217,7 @@ function triggerQuery(title, query, ctoKey, ctoIndex) {
 				setTimeout(
 					function() {
 						appendResult("Received response from all queries.\n");
-						document.getElementById('exec_status').innerHTML = "Done!";
+						document.getElementById('exec_status').innerHTML = "Done! " + Math.round(interval_pos/1000) + " second" + (interval_pos == 1000 ? "." : "s.");
 						
 						var doT = document.getElementById('doTest');
 						doT.innerText = "Execute";
@@ -233,6 +245,7 @@ function appendResult(result) {
 	var orTextArea = document.getElementById('outputResult');
 	var str = orTextArea.value + result + "\n";
 	orTextArea.value = str;
+	orTextArea.scrollTop = orTextArea.scrollHeight;
 }
 
 //clear all scheduled trigger query timers
